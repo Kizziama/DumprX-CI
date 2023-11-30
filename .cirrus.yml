@@ -1,0 +1,48 @@
+env:
+  # Telegram
+  TG_CHAT: "@hopireika_dump"
+  TG_TOKEN: "ENCRYPTED[95fdfa1f0da96e7f87ebd98cd586541dcc48af664a501fbedac07efd4b11bdc4c502b2a070d0c1de5cbd544b57b77cfe]"
+
+  # Gitlab
+  PUSH_TO_GITLAB: true
+  GITLAB_GROUP: PineaplePrjk
+  GITLAB_TOKEN: "ENCRYPTED[b123a36b4478889b33054038cb5191c36c435a53e9a20a4e92c5c819c975c9b567d97fe3aa38d265ec1626df77adb406]"
+  GITLAB_INSTANCE: gitlab.com
+
+  # Private SSH Key
+  PRIV_SSH_KEY: "ENCRYPTED[ce289942d453b78064bf29ef96013496581eef7497cd3426609eeab48c5520ce9d750f09821d950ee13799b3bada1c80]"
+
+task:
+  name: "Firmware Dumper"
+  timeout_in: 120m
+  container:
+      image: kizziama/ubuntu:latest
+      cpu: 4
+      memory: 16G
+
+  Clone_script:
+      - git clone --depth=1 --single-branch https://github.com/Kizziama/DumprX.git ~/DumprX
+  
+  Set-SSH-Keys_script:
+      - mkdir -p ~/.ssh
+      - ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+      - ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts
+      - ssh-keyscan -H "${GITLAB_INSTANCE}" >> ~/.ssh/known_hosts
+      - echo "${PRIV_SSH_KEY}" > ~/.ssh/id_ed25519
+      - chmod 600 ~/.ssh/id_ed25519
+
+  Setup_script:
+      - git config --global user.name "Kizziama"
+      - git config --global user.email "kizziama@proton.me"
+      - git config --global color.ui auto
+      - cd ~/DumprX
+      - echo "${GITLAB_TOKEN}" > .gitlab_token
+      - echo "${GITLAB_GROUP}" > .gitlab_group
+      - echo "${TG_CHAT}" > .tg_chat
+      - echo "${TG_TOKEN}" > .tg_token
+      - echo "${GITLAB_INSTANCE}" > .gitlab_instance
+      - bash setup.sh
+
+  DumprX_script:
+      - cd ~/DumprX
+      - ./dumper.sh $(cat ${CIRRUS_WORKING_DIR}/URL.txt)
